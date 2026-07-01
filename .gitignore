@@ -1,0 +1,6 @@
+node_modules/
+backend/data/
+*.db
+.vite/
+dist/
+.DS_Store
