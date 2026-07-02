@@ -3,10 +3,12 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const { initDb } = require('./database');
 const { seedDatabase } = require('./seed');
 const questionsRouter = require('./routes/questions');
 const sessionsRouter = require('./routes/sessions');
+const { SJT_QUESTIONS } = require('./sjtQuestions');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -134,6 +136,24 @@ async function start() {
         uptime: process.uptime()
       });
     });
+
+    app.get('/api/sjt', (req, res) => {
+      res.json(SJT_QUESTIONS);
+    });
+
+    // 生产环境下 serve 前端静态文件
+    const frontendDist = path.join(__dirname, '..', '..', 'frontend', 'dist');
+    if (NODE_ENV === 'production' && fs.existsSync(frontendDist)) {
+      app.use(express.static(frontendDist));
+      app.get('*', (req, res) => {
+        if (!req.path.startsWith('/api')) {
+          res.sendFile(path.join(frontendDist, 'index.html'));
+        }
+      });
+      log('info', `Serving frontend static files from: ${frontendDist}`);
+    } else if (NODE_ENV === 'production') {
+      log('warn', `Frontend dist not found at: ${frontendDist}. Run 'npm run build' in frontend/ first.`);
+    }
     
     app.listen(PORT, () => {
       log('info', `Backend service started: http://localhost:${PORT}`, {

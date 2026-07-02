@@ -95,7 +95,7 @@ router.post('/', (req, res) => {
     run('INSERT INTO users (id) VALUES (?)', [userId]);
     run('INSERT INTO sessions (id, user_id) VALUES (?, ?)', [sessionId, userId]);
     
-    res.status(201).json({ sessionId, userId });
+    res.status(201).json({ id: sessionId, sessionId, userId });
   } catch (err) {
     res.status(500).json({ error: '创建会话失败' });
   }
