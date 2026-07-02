@@ -1,6 +1,7 @@
 node_modules/
-backend/data/
-*.db
-.vite/
 dist/
+data/
+.env
+.env.local
 .DS_Store
+*.log
