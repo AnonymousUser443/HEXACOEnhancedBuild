@@ -5,9 +5,12 @@
         <h1 class="report-title">人格分析报告</h1>
         <p class="report-subtitle">基于 HEXACO 六因素模型</p>
       </div>
-      <button class="back-btn" @click="$router.push('/')">
-        ← 返回首页
-      </button>
+      <div class="header-actions">
+        <ShareButton v-if="sessionId" :session-id="sessionId" />
+        <button class="back-btn" @click="$router.push('/')">
+          ← 返回首页
+        </button>
+      </div>
     </header>
 
     <div v-if="loading" class="loading-state">
@@ -15,7 +18,7 @@
       <p>正在生成报告...</p>
     </div>
 
-    <div v-else-if="result" class="report-content">
+    <div v-else-if="result" class="report-content" id="report-content">
       <section class="section mbti-section">
         <div class="section-header">
           <h2 class="section-title">MBTI 类型</h2>
@@ -69,6 +72,22 @@
         <EnneagramTag :data="result.enneagram" />
       </section>
 
+      <section class="section theater-section" v-if="result.cognitiveFunctions">
+        <div class="section-header">
+          <h2 class="section-title">荣格八维心灵剧场</h2>
+          <span class="section-badge">John Beebe 模型</span>
+        </div>
+        <JungianTheater :data="result.cognitiveFunctions" />
+      </section>
+
+      <section class="section heatmap-section">
+        <div class="section-header">
+          <h2 class="section-title">跨模型交叉验证</h2>
+          <span class="section-badge">HEXACO ↔ MBTI</span>
+        </div>
+        <CrossValidationHeatmap :data="result" />
+      </section>
+
       <section class="section meta-section">
         <div class="meta-grid">
           <div class="meta-item">
@@ -107,6 +126,9 @@ import MbtiTypeDetail from '../components/MbtiTypeDetail.vue'
 import CognitiveFunctions from '../components/CognitiveFunctions.vue'
 import EnneagramTag from '../components/EnneagramTag.vue'
 import ValidityIndicator from '../components/ValidityIndicator.vue'
+import JungianTheater from '../components/JungianTheater.vue'
+import CrossValidationHeatmap from '../components/CrossValidationHeatmap.vue'
+import ShareButton from '../components/ShareButton.vue'
 
 const route = useRoute()
 const store = useResultStore()
@@ -166,6 +188,12 @@ function formatDate(dateStr) {
   font-size: 14px;
   opacity: 0.85;
   margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .back-btn {
@@ -364,6 +392,11 @@ function formatDate(dateStr) {
     flex-direction: column;
     gap: 16px;
     text-align: center;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    width: 100%;
   }
 
   .report-title {
