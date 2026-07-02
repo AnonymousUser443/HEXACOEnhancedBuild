@@ -2,8 +2,47 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { run, get, all } = require('../dbhelper');
 const { calculateFullResult } = require('../scoringEngine');
+const { SJT_QUESTIONS } = require('../sjtQuestions');
 
 const router = express.Router();
+
+router.get('/sjt/questions', (req, res) => {
+  res.json(SJT_QUESTIONS);
+});
+
+router.post('/:sessionId/sjt-answers', (req, res) => {
+  const { sessionId } = req.params;
+  const { questionId, answerValue } = req.body;
+
+  const session = get('SELECT * FROM sessions WHERE id = ?', [sessionId]);
+  if (!session) return res.status(404).json({ error: '会话不存在' });
+  if (session.status === 'completed') return res.status(400).json({ error: '该会话已结束' });
+
+  const question = SJT_QUESTIONS.find(q => q.id === questionId);
+  if (!question) return res.status(404).json({ error: '题目不存在' });
+
+  const option = question.options.find(o => o.id === answerValue);
+  if (!option) return res.status(400).json({ error: '选项无效' });
+
+  const existing = get(
+    'SELECT id FROM sjt_answers WHERE session_id = ? AND question_id = ?',
+    [sessionId, questionId]
+  );
+
+  if (existing) {
+    run(
+      'UPDATE sjt_answers SET answer_value = ? WHERE session_id = ? AND question_id = ?',
+      [answerValue, sessionId, questionId]
+    );
+  } else {
+    run(
+      'INSERT INTO sjt_answers (session_id, question_id, answer_value) VALUES (?, ?, ?)',
+      [sessionId, questionId, answerValue]
+    );
+  }
+
+  res.json({ success: true });
+});
 
 router.post('/', (req, res) => {
   const userId = uuidv4();
@@ -96,8 +135,14 @@ router.get('/:sessionId/result', (req, res) => {
     return res.status(400).json({ error: '尚无作答数据' });
   }
 
+  const sjtAnswers = all(`
+    SELECT question_id, answer_value
+    FROM sjt_answers
+    WHERE session_id = ?
+  `, [sessionId]);
+
   try {
-    const result = calculateFullResult(answers);
+    const result = calculateFullResult(answers, sjtAnswers);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -71,6 +71,7 @@ const ENNEAGRAM_WEIGHTS = {
 };
 
 const { COGNITIVE_FUNCTIONS, ENNEAGRAM_PROFILES, MBTI_PROFILES } = require('./personalityProfiles');
+const { calculateOverallValidity } = require('./anomalyDetection');
 
 function applyReverseScoring(rawValue, reverseScored) {
   return reverseScored ? (6 - rawValue) : rawValue;
@@ -288,7 +289,9 @@ function analyzeResponseTimes(answers) {
       avgResponseTime: null,
       stdResponseTime: null,
       fastCount: 0,
-      slowCount: 0
+      slowCount: 0,
+      anomalies: [],
+      pattern: 'normal'
     };
   }
 
@@ -296,17 +299,57 @@ function analyzeResponseTimes(answers) {
   const variance = times.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / times.length;
   const std = Math.sqrt(variance);
 
-  const fastCount = times.filter(t => t < 2000).length;
+  const fastCount = times.filter(t => t < 1500).length;
+  const veryFastCount = times.filter(t => t < 500).length;
   const slowCount = times.filter(t => t > 30000).length;
+  const verySlowCount = times.filter(t => t > 60000).length;
 
+  const anomalies = [];
   let valid = true;
   let warning = null;
+  let pattern = 'normal';
 
-  if (fastCount > times.length * 0.3) {
+  if (veryFastCount > 0) {
+    anomalies.push({ type: 'very_fast', count: veryFastCount, message: '存在极快速作答（<500ms）' });
     valid = false;
-    warning = '作答速度过快，建议重新作答以获得更准确的结果';
-  } else if (fastCount > times.length * 0.15) {
-    warning = '部分题目作答较快，请确保认真阅读题干后再选择';
+  }
+
+  if (fastCount > times.length * 0.25) {
+    anomalies.push({ type: 'fast', count: fastCount, message: `超过25%题目作答过快（<1.5s）` });
+    valid = false;
+  } else if (fastCount > times.length * 0.1) {
+    anomalies.push({ type: 'some_fast', count: fastCount, message: `部分题目作答较快` });
+    if (!warning) warning = '部分题目作答较快，请确保认真阅读题干后再选择';
+  }
+
+  if (verySlowCount > times.length * 0.1) {
+    anomalies.push({ type: 'very_slow', count: verySlowCount, message: `超过10%题目作答过慢（>60s）` });
+    if (!warning) warning = '部分题目作答时间过长，可能存在分心';
+  }
+
+  if (slowCount > times.length * 0.2) {
+    anomalies.push({ type: 'slow', count: slowCount, message: `超过20%题目作答较慢（>30s）` });
+    if (!warning) warning = '部分题目作答较慢';
+  }
+
+  const cv = std / avg;
+  if (cv > 2.0) {
+    anomalies.push({ type: 'high_variance', message: '作答时间波动过大，可能存在不认真作答' });
+    pattern = 'inconsistent';
+  }
+
+  if (avg < 2500) {
+    pattern = 'fast';
+    if (!warning) warning = '整体作答速度偏快';
+  } else if (avg > 15000) {
+    pattern = 'slow';
+    if (!warning) warning = '整体作答速度偏慢';
+  }
+
+  const sequencePattern = detectSequencePattern(times);
+  if (sequencePattern) {
+    anomalies.push(sequencePattern);
+    valid = false;
   }
 
   return {
@@ -314,13 +357,68 @@ function analyzeResponseTimes(answers) {
     warning,
     avgResponseTime: Math.round(avg),
     stdResponseTime: Math.round(std),
+    coefficientOfVariation: Math.round(cv * 100) / 100,
     fastCount,
+    veryFastCount,
     slowCount,
-    totalCount: times.length
+    verySlowCount,
+    totalCount: times.length,
+    anomalies,
+    pattern
   };
 }
 
-function calculateValidityIndex(answers) {
+function detectSequencePattern(times) {
+  let consecutiveFast = 0;
+  let maxConsecutiveFast = 0;
+  
+  for (const t of times) {
+    if (t < 1500) {
+      consecutiveFast++;
+      maxConsecutiveFast = Math.max(maxConsecutiveFast, consecutiveFast);
+    } else {
+      consecutiveFast = 0;
+    }
+  }
+
+  if (maxConsecutiveFast >= 5) {
+    return { 
+      type: 'fast_sequence', 
+      count: maxConsecutiveFast,
+      message: `连续${maxConsecutiveFast}题快速作答，可能存在随机选择` 
+    };
+  }
+
+  const equalCount = detectEqualAnswers(times);
+  if (equalCount >= 8) {
+    return { 
+      type: 'equal_sequence', 
+      count: equalCount,
+      message: `连续${equalCount}题作答时间相近，可能存在规律选择` 
+    };
+  }
+
+  return null;
+}
+
+function detectEqualAnswers(times) {
+  let maxEqual = 1;
+  let currentEqual = 1;
+  
+  for (let i = 1; i < times.length; i++) {
+    const diff = Math.abs(times[i] - times[i - 1]);
+    if (diff < 200) {
+      currentEqual++;
+      maxEqual = Math.max(maxEqual, currentEqual);
+    } else {
+      currentEqual = 1;
+    }
+  }
+  
+  return maxEqual;
+}
+
+function calculateValidityIndex(answers, hexacoScores = null) {
   const rtAnalysis = analyzeResponseTimes(answers);
   
   const reverseCount = answers.filter(a => a.reverse_scored === 1).length;
@@ -332,13 +430,14 @@ function calculateValidityIndex(answers) {
 
   return {
     validityIndex,
+    validityLevel: validityIndex >= 0.85 ? 'excellent' : validityIndex >= 0.7 ? 'good' : validityIndex >= 0.55 ? 'fair' : 'poor',
     responseTimeAnalysis: rtAnalysis,
     reverseItemRatio: reverseCount / totalCount,
     answeredCount: totalCount
   };
 }
 
-function calculateFullResult(answers) {
+function calculateFullResult(answers, sjtAnswers = []) {
   if (!answers || answers.length === 0) {
     throw new Error('无作答数据');
   }
@@ -347,7 +446,8 @@ function calculateFullResult(answers) {
   const dimensionScores = calculateDimensionScores(facetScores);
   const mbtiResult = mapToMBTI(dimensionScores);
   const enneagramResult = mapToEnneagram(dimensionScores);
-  const validity = calculateValidityIndex(answers);
+  
+  const validity = calculateOverallValidity(answers, dimensionScores, sjtAnswers);
 
   const mbtiType = mbtiResult.type;
   const cognitiveFunctions = COGNITIVE_FUNCTIONS[mbtiType] || null;

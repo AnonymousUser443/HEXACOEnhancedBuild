@@ -91,14 +91,40 @@ export const useResultStore = defineStore('result', () => {
     },
     validity: {
       validityIndex: 0.85,
+      validityLevel: 'good',
       responseTimeAnalysis: {
         avgResponseTime: 5200,
         fastCount: 3,
         slowCount: 5,
-        pattern: 'normal'
+        veryFastCount: 0,
+        coefficientOfVariation: 1.2,
+        pattern: 'normal',
+        valid: true,
+        totalCount: 96
       },
       reverseItemRatio: 0.48,
-      consistency: 0.88
+      consistency: 0.88,
+      anomalyDetection: {
+        riskLevel: 'low',
+        totalAnomalies: 1,
+        isAnomalous: false,
+        anomalies: [
+          { name: '轻微速度波动', severity: 'medium', description: '部分题目作答速度存在轻微波动' }
+        ]
+      },
+      sjtValidity: {
+        valid: true,
+        correlation: 0.72,
+        message: '情境测验作答与人格维度具有良好的一致性'
+      },
+      summary: {
+        details: [
+          { name: '响应时间', value: '正常', score: 0.95 },
+          { name: '作答模式', value: '正常', score: 0.9 },
+          { name: '情境测验', value: '一致', score: 0.92 }
+        ],
+        overallScore: 0.85
+      }
     },
     answeredCount: 96,
     calculatedAt: '2026-07-02T09:00:00Z'
