@@ -45,12 +45,6 @@
 <script setup>
 import { computed } from 'vue'
 import VChart from 'vue-echarts'
-import { use } from 'echarts/core'
-import { RadarChart } from 'echarts/charts'
-import { RadarComponent, TooltipComponent } from 'echarts/components'
-import { CanvasRenderer } from 'echarts/renderers'
-
-use([RadarChart, RadarComponent, TooltipComponent, CanvasRenderer])
 
 const props = defineProps({
   data: {

@@ -116,19 +116,20 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 import { useResultStore } from '../stores/resultStore'
 import HexacoRadarChart from '../components/HexacoRadarChart.vue'
 import FacetBarCharts from '../components/FacetBarCharts.vue'
 import MbtiSpectrum from '../components/MbtiSpectrum.vue'
 import MbtiTypeDetail from '../components/MbtiTypeDetail.vue'
-import CognitiveFunctions from '../components/CognitiveFunctions.vue'
 import EnneagramTag from '../components/EnneagramTag.vue'
 import ValidityIndicator from '../components/ValidityIndicator.vue'
-import JungianTheater from '../components/JungianTheater.vue'
-import CrossValidationHeatmap from '../components/CrossValidationHeatmap.vue'
 import ShareButton from '../components/ShareButton.vue'
+
+const CognitiveFunctions = defineAsyncComponent(() => import('../components/CognitiveFunctions.vue'))
+const JungianTheater = defineAsyncComponent(() => import('../components/JungianTheater.vue'))
+const CrossValidationHeatmap = defineAsyncComponent(() => import('../components/CrossValidationHeatmap.vue'))
 
 const route = useRoute()
 const store = useResultStore()

@@ -11,5 +11,23 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vue: ['vue', 'vue-router', 'pinia'],
+          echarts: ['echarts', 'vue-echarts'],
+          vendor: ['axios']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000,
+    assetsInlineLimit: 4096,
+    cssCodeSplit: true
+  },
+  optimizeDeps: {
+    include: ['vue', 'vue-router', 'pinia', 'axios', 'echarts', 'vue-echarts'],
+    exclude: ['html2canvas', 'jspdf']
   }
 })

@@ -22,12 +22,6 @@
 <script setup>
 import { computed } from 'vue'
 import VChart from 'vue-echarts'
-import { use } from 'echarts/core'
-import { HeatmapChart } from 'echarts/charts'
-import { TooltipComponent, GridComponent, VisualMapComponent } from 'echarts/components'
-import { CanvasRenderer } from 'echarts/renderers'
-
-use([HeatmapChart, TooltipComponent, GridComponent, VisualMapComponent, CanvasRenderer])
 
 const props = defineProps({
   data: {
