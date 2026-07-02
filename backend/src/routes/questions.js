@@ -21,9 +21,10 @@ router.get('/dimensions/:code/facets', (req, res) => {
 // 获取所有题目（含维度/子面信息）
 router.get('/questions', (req, res) => {
   const questions = all(`
-    SELECT q.id, q.stem, q.reverse_scored, q.sort_order,
+    SELECT q.id, q.stem as text, q.reverse_scored, q.sort_order,
            f.id as facet_id, f.name as facet_name,
-           d.code as dimension_code, d.name as dimension_name
+           d.code as dimension_code, d.name as dimension_name,
+           d.name as dimensionName
     FROM questions q
     JOIN facets f ON q.facet_id = f.id
     JOIN dimensions d ON f.dimension_code = d.code
