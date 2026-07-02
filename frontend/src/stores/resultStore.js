@@ -48,7 +48,46 @@ export const useResultStore = defineStore('result', () => {
       SN: { type: 'N', probability: 0.69, percent: 69 },
       TF: { type: 'F', probability: 0.76, percent: 76 },
       JP: { type: 'J', probability: 0.61, percent: 61 },
-      type: 'ENFJ'
+      type: 'ENFJ',
+      profile: {
+        name: '主人公型',
+        description: '主人公型人格是天生的领导者，充满热情和魅力，善于激励他人。他们具有强烈的责任感和理想主义，渴望让世界变得更美好。',
+        strengths: ['善于沟通', '富有感染力', '责任心强', '有远见'],
+        growthPoints: ['学会拒绝', '保持理性', '关注自我需求'],
+        careers: ['教师', '咨询师', '管理者', '社工'],
+        famousPeople: ['马丁·路德·金', '奥普拉·温弗瑞', '约翰·肯尼迪']
+      }
+    },
+    cognitiveFunctions: {
+      dominant: { name: 'Fe', label: '外倾情感', description: '通过情感连接与他人建立关系' },
+      auxiliary: { name: 'Ni', label: '内倾直觉', description: '洞察深层意义和未来可能性' },
+      tertiary: { name: 'Se', label: '外倾感觉', description: '关注当下的具体体验' },
+      inferior: { name: 'Ti', label: '内倾思考', description: '逻辑分析和客观推理' },
+      shadow: [
+        { position: '第五功能', name: 'Ti', label: '内倾思考' },
+        { position: '第六功能', name: 'Se', label: '外倾感觉' },
+        { position: '第七功能', name: 'Ni', label: '内倾直觉' },
+        { position: '第八功能', name: 'Fe', label: '外倾情感' }
+      ]
+    },
+    enneagram: {
+      type: '2',
+      probability: 0.35,
+      topThree: [
+        { type: '2', name: '助人型', percent: 35 },
+        { type: '3', name: '成就型', percent: 28 },
+        { type: '7', name: '活跃型', percent: 22 }
+      ],
+      profile: {
+        name: '助人型',
+        alias: '给予者',
+        coreMotivation: '被爱和被需要',
+        coreFear: '不被爱、被拒绝',
+        description: '助人型人格的核心动机是通过帮助他人来获得爱和认可。他们善于察觉他人的需求，乐于奉献，但有时会忽视自己的感受。',
+        strengths: ['富有同情心', '乐于助人', '善于倾听', '团队协作'],
+        growthTips: ['学会关爱自己', '建立健康边界', '练习说不'],
+        level: ['健康状态：无私奉献，充满爱心', '一般状态：寻求认可，过度付出', '不健康状态：操纵他人，自我牺牲']
+      }
     },
     validity: {
       validityIndex: 0.85,

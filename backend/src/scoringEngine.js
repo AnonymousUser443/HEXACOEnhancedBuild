@@ -7,6 +7,8 @@
  * 3. T分数转换（基于常模）
  * 4. 百分位计算（正态分布查表）
  * 5. HEXACO → MBTI 逻辑斯蒂回归映射
+ * 6. HEXACO → 九型人格映射
+ * 7. MBTI → 荣格八维功能栈查表
  */
 
 const DIMENSION_NAMES = {
@@ -55,6 +57,20 @@ const MBTI_WEIGHTS = {
     weights: { H: 0.2, E: -0.3, X: -0.1, A: -0.1, C: 1.0, O: -0.4 }
   }
 };
+
+const ENNEAGRAM_WEIGHTS = {
+  '1': { H: 0.8, E: -0.3, X: -0.2, A: 0.3, C: 0.9, O: 0.1 },
+  '2': { H: 0.6, E: 0.2, X: 0.4, A: 0.9, C: 0.3, O: 0.2 },
+  '3': { H: -0.2, E: -0.1, X: 0.8, A: 0.4, C: 0.7, O: 0.5 },
+  '4': { H: 0.3, E: 0.7, X: -0.1, A: 0.5, C: -0.2, O: 0.8 },
+  '5': { H: 0.5, E: -0.4, X: -0.3, A: 0.2, C: 0.4, O: 0.9 },
+  '6': { H: 0.7, E: 0.6, X: -0.1, A: 0.5, C: 0.6, O: -0.2 },
+  '7': { H: -0.1, E: -0.3, X: 0.9, A: 0.3, C: -0.3, O: 0.7 },
+  '8': { H: -0.3, E: 0.5, X: 0.7, A: -0.2, C: 0.8, O: 0.3 },
+  '9': { H: 0.4, E: -0.2, X: 0.2, A: 0.8, C: 0.1, O: 0.4 }
+};
+
+const { COGNITIVE_FUNCTIONS, ENNEAGRAM_PROFILES, MBTI_PROFILES } = require('./personalityProfiles');
 
 function applyReverseScoring(rawValue, reverseScored) {
   return reverseScored ? (6 - rawValue) : rawValue;
@@ -217,6 +233,51 @@ function mapToMBTI(dimensionScores) {
   return result;
 }
 
+function mapToEnneagram(dimensionScores) {
+  const dimensionMap = {};
+  for (const ds of dimensionScores) {
+    dimensionMap[ds.code] = ds.rawScore;
+  }
+
+  const scores = {};
+  let maxScore = -Infinity;
+  let maxType = '9';
+
+  for (const [type, weights] of Object.entries(ENNEAGRAM_WEIGHTS)) {
+    let score = 0;
+    for (const [dim, w] of Object.entries(weights)) {
+      score += w * (dimensionMap[dim] || 3.0);
+    }
+    scores[type] = score;
+    if (score > maxScore) {
+      maxScore = score;
+      maxType = type;
+    }
+  }
+
+  const total = Object.values(scores).reduce((a, b) => a + b, 0);
+  const probabilities = {};
+  for (const [type, score] of Object.entries(scores)) {
+    probabilities[type] = Math.round((score / total) * 100) / 100;
+  }
+
+  const sortedTypes = Object.entries(probabilities)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+
+  return {
+    type: maxType,
+    primary: maxType,
+    probabilities,
+    topThree: sortedTypes.map(([type, prob]) => ({
+      type,
+      probability: prob,
+      percent: Math.round(prob * 100)
+    })),
+    scores
+  };
+}
+
 function analyzeResponseTimes(answers) {
   const times = answers.filter(a => a.response_time_ms > 0).map(a => a.response_time_ms);
   
@@ -285,12 +346,26 @@ function calculateFullResult(answers) {
   const facetScores = calculateFacetScores(answers);
   const dimensionScores = calculateDimensionScores(facetScores);
   const mbtiResult = mapToMBTI(dimensionScores);
+  const enneagramResult = mapToEnneagram(dimensionScores);
   const validity = calculateValidityIndex(answers);
+
+  const mbtiType = mbtiResult.type;
+  const cognitiveFunctions = COGNITIVE_FUNCTIONS[mbtiType] || null;
+  const mbtiProfile = MBTI_PROFILES[mbtiType] || null;
+  const enneagramProfile = ENNEAGRAM_PROFILES[enneagramResult.type] || null;
 
   return {
     hexaco: dimensionScores,
     facets: facetScores,
-    mbti: mbtiResult,
+    mbti: {
+      ...mbtiResult,
+      profile: mbtiProfile
+    },
+    enneagram: {
+      ...enneagramResult,
+      profile: enneagramProfile
+    },
+    cognitiveFunctions,
     validity,
     answeredCount: answers.length,
     calculatedAt: new Date().toISOString()
@@ -303,10 +378,15 @@ module.exports = {
   calculateDimensionScores,
   calculatePercentile,
   mapToMBTI,
+  mapToEnneagram,
   analyzeResponseTimes,
   calculateValidityIndex,
   calculateFullResult,
   DIMENSION_NAMES,
   HEXACO_NORMS,
-  MBTI_WEIGHTS
+  MBTI_WEIGHTS,
+  ENNEAGRAM_WEIGHTS,
+  COGNITIVE_FUNCTIONS,
+  ENNEAGRAM_PROFILES,
+  MBTI_PROFILES
 };

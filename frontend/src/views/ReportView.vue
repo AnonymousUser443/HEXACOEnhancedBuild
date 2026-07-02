@@ -22,6 +22,7 @@
           <span class="section-badge">十六型人格</span>
         </div>
         <MbtiSpectrum :data="result.mbti" />
+        <MbtiTypeDetail :data="result.mbti" />
       </section>
 
       <section class="section radar-section">
@@ -50,6 +51,22 @@
 
       <section class="section validity-section">
         <ValidityIndicator :data="result.validity" />
+      </section>
+
+      <section class="section cognitive-section" v-if="result.cognitiveFunctions">
+        <div class="section-header">
+          <h2 class="section-title">荣格八维功能</h2>
+          <span class="section-badge">Beebe 模型</span>
+        </div>
+        <CognitiveFunctions :data="result.cognitiveFunctions" />
+      </section>
+
+      <section class="section enneagram-section" v-if="result.enneagram">
+        <div class="section-header">
+          <h2 class="section-title">九型人格</h2>
+          <span class="section-badge">九型标签</span>
+        </div>
+        <EnneagramTag :data="result.enneagram" />
       </section>
 
       <section class="section meta-section">
@@ -86,6 +103,9 @@ import { useResultStore } from '../stores/resultStore'
 import HexacoRadarChart from '../components/HexacoRadarChart.vue'
 import FacetBarCharts from '../components/FacetBarCharts.vue'
 import MbtiSpectrum from '../components/MbtiSpectrum.vue'
+import MbtiTypeDetail from '../components/MbtiTypeDetail.vue'
+import CognitiveFunctions from '../components/CognitiveFunctions.vue'
+import EnneagramTag from '../components/EnneagramTag.vue'
 import ValidityIndicator from '../components/ValidityIndicator.vue'
 
 const route = useRoute()
