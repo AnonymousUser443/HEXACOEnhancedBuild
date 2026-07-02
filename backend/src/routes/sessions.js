@@ -33,6 +33,58 @@ router.get('/sjt/questions', (req, res) => {
   res.json(SJT_QUESTIONS);
 });
 
+// 前端通过索引提交 SJT 答案: { question_index, answer_index }
+router.post('/:sessionId/sjt', (req, res) => {
+  const { sessionId } = req.params;
+  
+  const validation = validateSessionId(sessionId);
+  if (!validation.valid) {
+    return res.status(400).json({ error: validation.error });
+  }
+  
+  const { question_index, answer_index } = req.body;
+  
+  if (typeof question_index !== 'number' || question_index < 0) {
+    return res.status(400).json({ error: '题目索引无效' });
+  }
+  if (typeof answer_index !== 'number' || answer_index < 0) {
+    return res.status(400).json({ error: '选项索引无效' });
+  }
+  
+  const question = SJT_QUESTIONS[question_index];
+  if (!question) return res.status(404).json({ error: '题目不存在' });
+  
+  const option = question.options[answer_index];
+  if (!option) return res.status(400).json({ error: '选项无效' });
+  
+  const session = get('SELECT * FROM sessions WHERE id = ?', [sessionId]);
+  if (!session) return res.status(404).json({ error: '会话不存在' });
+  if (session.status === 'completed') return res.status(400).json({ error: '该会话已结束' });
+  
+  try {
+    const existing = get(
+      'SELECT id FROM sjt_answers WHERE session_id = ? AND question_id = ?',
+      [sessionId, question.id]
+    );
+    
+    if (existing) {
+      run(
+        'UPDATE sjt_answers SET answer_value = ? WHERE session_id = ? AND question_id = ?',
+        [option.id, sessionId, question.id]
+      );
+    } else {
+      run(
+        'INSERT INTO sjt_answers (session_id, question_id, answer_value) VALUES (?, ?, ?)',
+        [sessionId, question.id, option.id]
+      );
+    }
+    
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: '服务器内部错误' });
+  }
+});
+
 router.post('/:sessionId/sjt-answers', (req, res) => {
   const { sessionId } = req.params;
   
@@ -109,7 +161,10 @@ router.post('/:sessionId/answers', (req, res) => {
     return res.status(400).json({ error: validation.error });
   }
   
-  const { questionId, answerValue, responseTimeMs } = req.body;
+  // 兼容前端发送的 snake_case 字段名 (question_id, answer_value)
+  const questionId = req.body.questionId ?? req.body.question_id;
+  const answerValue = req.body.answerValue ?? req.body.answer_value;
+  const responseTimeMs = req.body.responseTimeMs ?? req.body.response_time_ms;
   
   if (!questionId || typeof questionId !== 'number') {
     return res.status(400).json({ error: '题目ID必须是数字' });
